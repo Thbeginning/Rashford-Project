@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rashford HMS – Medical Consultation</title>
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+<div class="app">
+
+  <!-- ═══ SIDEBAR ══════════════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">🏥</div>
+      <div><h1>Rashford HMS</h1><p>Doctor Station</p></div>
+    </div>
+    <nav class="nav">
+      <a class="nav-link" href="nurse-dashboard.html"><span class="nav-icon">🩺</span> Triage & Registration</a>
+      <a class="nav-link active" href="doctor-dashboard.html"><span class="nav-icon">👨‍⚕️</span> Consultation</a>
+      <a class="nav-link" href="labtech-dashboard.html"><span class="nav-icon">🔬</span> Laboratory</a>
+      <a class="nav-link" href="accountant-dashboard.html"><span class="nav-icon">💳</span> Finance</a>
+      <a class="nav-link" href="pharmacist-dashboard.html"><span class="nav-icon">💊</span> Pharmacy</a>
+      <div class="nav-divider"></div>
+      <a class="nav-link" id="btn-logout" href="#"><span class="nav-icon">🚪</span> Logout</a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="sidebar-avatar" id="sidebar-avatar">DR</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name" id="sidebar-name">Doctor</div>
+        <div class="sidebar-user-role" id="sidebar-role">Doctor</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ MAIN ═════════════════════════════════════ -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title">
+        <h2>Medical Officer Consultation</h2>
+        <p>Manage patient cases, issue lab orders and prescriptions</p>
+      </div>
+      <div class="status-pill">● Online</div>
+    </div>
+
+    <div class="page-content">
+      <div class="layout-split">
+
+        <!-- LEFT: Consultation Workspace -->
+        <div class="layout-main">
+
+          <!-- Empty state -->
+          <div class="card text-center" id="empty-state" style="padding:4rem 2rem">
+            <div style="font-size:3.5rem;margin-bottom:1rem">🩺</div>
+            <h3 class="text-bright" style="margin-bottom:.5rem">Select a Patient Case</h3>
+            <p class="text-muted">Choose an active triage from the Pending Queue on the right panel to begin consultation.</p>
+          </div>
+
+          <!-- Consultation panel (hidden until patient selected) -->
+          <div id="consult-panel" class="hidden">
+
+            <!-- Patient Header -->
+            <div class="card" style="padding:1.25rem 1.75rem">
+              <div class="flex justify-between items-center">
+                <div>
+                  <h3 class="text-bright" style="font-size:1.15rem;font-weight:700" id="cp-name">—</h3>
+                  <div class="flex gap-1 mt-1">
+                    <span class="badge badge-primary" id="cp-pin">—</span>
+                    <span class="badge badge-success" id="cp-encounter">—</span>
+                  </div>
+                </div>
+                <div class="text-sm text-muted" id="cp-date">—</div>
+              </div>
+            </div>
+
+            <!-- Vitals Panel -->
+            <div class="card" style="padding:1.5rem">
+              <h3 class="card-title">📊 Triage Vitals (Nursing Log)</h3>
+              <div class="vitals-grid">
+                <div class="vital-chip">
+                  <div class="vital-chip-label">Blood Pressure</div>
+                  <div class="vital-chip-value" id="v-bp">—</div>
+                  <div class="vital-chip-unit">mmHg</div>
+                </div>
+                <div class="vital-chip">
+                  <div class="vital-chip-label">Temperature</div>
+                  <div class="vital-chip-value" id="v-temp">—</div>
+                  <div class="vital-chip-unit">°C</div>
+                </div>
+                <div class="vital-chip">
+                  <div class="vital-chip-label">Pulse Rate</div>
+                  <div class="vital-chip-value" id="v-pulse">—</div>
+                  <div class="vital-chip-unit">bpm</div>
+                </div>
+                <div class="vital-chip">
+                  <div class="vital-chip-label">Weight</div>
+                  <div class="vital-chip-value" id="v-weight">—</div>
+                  <div class="vital-chip-unit">kg</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Clinical Notes -->
+            <div class="card">
+              <h3 class="card-title">📝 Diagnostic Summary & Clinical Notes</h3>
+              <form id="notes-form">
+                <div class="form-group">
+                  <textarea class="form-control" id="clinical-notes" rows="6"
+                    placeholder="Document diagnosis, clinical observations, treatment plan, follow-up instructions…"></textarea>
+                </div>
+                <button type="submit" class="btn btn-success btn-full" id="btn-save-notes">
+                  ✅ Save & Close Encounter
+                </button>
+              </form>
+            </div>
+
+            <!-- Action panels: Lab + Prescription side by side -->
+            <div class="grid-2">
+
+              <!-- Lab Request -->
+              <div class="card">
+                <h3 class="card-title">🔬 Request Lab Diagnostic</h3>
+                <form id="lab-form">
+                  <div class="form-group">
+                    <label class="form-label" for="test-type">Select Test</label>
+                    <select class="form-control" id="test-type">
+                      <option value="">— Choose Test —</option>
+                      <option>Full Blood Count (FBC)</option>
+                      <option>Malaria Parasite Test</option>
+                      <option>Widal Typhoid Test</option>
+                      <option>Blood Glucose Fasting</option>
+                      <option>Urinalysis Complete</option>
+                      <option>HIV Rapid Test</option>
+                      <option>Pregnancy Test (HCG)</option>
+                      <option>Stool Microscopy</option>
+                    </select>
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-full btn-sm" id="btn-lab">
+                    Submit Lab Order
+                  </button>
+                </form>
+                <div class="mt-2">
+                  <p class="text-sm text-muted font-bold" style="text-transform:uppercase;letter-spacing:.5px;margin-bottom:.5rem">Active Orders</p>
+                  <div id="lab-list" style="display:flex;flex-direction:column;gap:.5rem">
+                    <p class="text-sm text-muted">None yet</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Prescription -->
+              <div class="card">
+                <h3 class="card-title">💊 Issue Prescription</h3>
+                <form id="script-form">
+                  <div class="form-group">
+                    <label class="form-label" for="med-name">Medication</label>
+                    <select class="form-control" id="med-name">
+                      <option value="">— Choose Medication —</option>
+                      <option>Amoxicillin 500mg</option>
+                      <option>Paracetamol 500mg</option>
+                      <option>Ibuprofen 400mg</option>
+                      <option>Ciprofloxacin 500mg</option>
+                      <option>Metformin 850mg</option>
+                      <option>Artemether/Lumef.</option>
+                      <option>ORS Sachets (10pk)</option>
+                      <option>Vitamin C 500mg</option>
+                    </select>
+                  </div>
+                  <div class="grid-2">
+                    <div class="form-group">
+                      <label class="form-label" for="dosage">Dosage</label>
+                      <input class="form-control" type="text" id="dosage" placeholder="e.g. 1×3 Daily" />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="qty">Qty</label>
+                      <input class="form-control" type="number" id="qty" min="1" max="200" value="1" />
+                    </div>
+                  </div>
+                  <button type="submit" class="btn btn-accent btn-full btn-sm" id="btn-script">
+                    Issue Prescription
+                  </button>
+                </form>
+                <div class="mt-2">
+                  <p class="text-sm text-muted font-bold" style="text-transform:uppercase;letter-spacing:.5px;margin-bottom:.5rem">Active Scripts</p>
+                  <div id="script-list" style="display:flex;flex-direction:column;gap:.5rem">
+                    <p class="text-sm text-muted">None yet</p>
+                  </div>
+                </div>
+              </div>
+
+            </div><!-- /grid-2 -->
+          </div><!-- /consult-panel -->
+
+        </div><!-- /layout-main -->
+
+        <!-- RIGHT: Patient Queue -->
+        <div>
+          <div class="card">
+            <h2 class="card-title">🗂️ Pending Consultation Queue</h2>
+            <div class="queue" id="patient-queue">
+              <p class="text-muted text-sm text-center">Loading queue…</p>
+            </div>
+            <button class="btn btn-outline btn-full btn-sm mt-2" id="btn-refresh-queue">🔄 Refresh Queue</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script type="module">
+import { requireAuth }               from '../js/auth.js';
+import { wireSidebar, toast, setLoading, fmtDateTime } from '../js/ui.js';
+import {
+  getPendingQueueForDoctor, getEncounterById,
+  saveConsultation, requestLabOrder, issuePrescription,
+  getLabOrdersForEncounter, getPrescriptionsForEncounter
+} from '../js/modules/encounter.js';
+
+// ── Auth ─────────────────────────────────────────────────
+const session = requireAuth();
+wireSidebar(session);
+
+let currentEncounterId  = null;
+let currentPatientPin   = null;
+
+// ── Load pending queue ────────────────────────────────────
+const queueEl     = document.getElementById('patient-queue');
+const emptyState  = document.getElementById('empty-state');
+const consultPanel= document.getElementById('consult-panel');
+
+async function loadQueue() {
+  queueEl.innerHTML = '<p class="text-muted text-sm text-center">Loading…</p>';
+  try {
+    const list = await getPendingQueueForDoctor(session.user_id);
+    queueEl.innerHTML = '';
+    if (!list.length) {
+      queueEl.innerHTML = '<p class="text-muted text-sm text-center">No pending cases</p>';
+      return;
+    }
+    list.forEach(enc => {
+      const p = enc.patients;
+      const el = document.createElement('div');
+      el.className = 'queue-item';
+      el.innerHTML = `
+        <div>
+          <div class="queue-item-name">${p.first_name} ${p.last_name}</div>
+          <div class="queue-item-sub">PIN: ${enc.patient_pin}</div>
+        </div>
+        <button class="btn btn-sm btn-primary">Consult</button>`;
+      el.querySelector('button').addEventListener('click', () => openConsult(enc.encounter_id, enc.patient_pin));
+      queueEl.appendChild(el);
+    });
+  } catch(err) { toast(err.message, 'error'); }
+}
+
+document.getElementById('btn-refresh-queue').addEventListener('click', loadQueue);
+loadQueue();
+
+// ── Open consultation ─────────────────────────────────────
+async function openConsult(encId, patientPin) {
+  currentEncounterId = encId;
+  currentPatientPin  = patientPin;
+  try {
+    const enc = await getEncounterById(encId);
+    const p   = enc.patients;
+    const v   = enc.triage_vitals || {};
+
+    document.getElementById('cp-name').textContent    = `${p.first_name} ${p.last_name}`;
+    document.getElementById('cp-pin').textContent     = enc.patient_pin;
+    document.getElementById('cp-encounter').textContent = `Visit #${enc.encounter_id}`;
+    document.getElementById('cp-date').textContent    = fmtDateTime(enc.date_created);
+    document.getElementById('clinical-notes').value   = enc.clinical_notes || '';
+
+    document.getElementById('v-bp').textContent     = v.bp    || '—';
+    document.getElementById('v-temp').textContent   = v.temp  ?? '—';
+    document.getElementById('v-pulse').textContent  = v.pulse ?? '—';
+    document.getElementById('v-weight').textContent = v.weight?? '—';
+
+    await refreshSideLists();
+
+    emptyState.classList.add('hidden');
+    consultPanel.classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch(err) { toast(err.message, 'error'); }
+}
+
+// ── Refresh lab + prescription side lists ─────────────────
+async function refreshSideLists() {
+  const labs    = await getLabOrdersForEncounter(currentEncounterId);
+  const scripts = await getPrescriptionsForEncounter(currentEncounterId);
+
+  const labList = document.getElementById('lab-list');
+  labList.innerHTML = '';
+  if (!labs.length) { labList.innerHTML = '<p class="text-sm text-muted">None yet</p>'; }
+  else labs.forEach(l => {
+    const d = document.createElement('div');
+    d.style.cssText = 'display:flex;justify-content:space-between;align-items:center;background:var(--bg-input);padding:.5rem .75rem;border-radius:6px;border:1px solid var(--border)';
+    d.innerHTML = `<span class="text-sm">${l.test_type}</span><span class="badge ${l.status==='COMPLETED'?'badge-success':'badge-warning'}">${l.status}</span>`;
+    labList.appendChild(d);
+  });
+
+  const scriptList = document.getElementById('script-list');
+  scriptList.innerHTML = '';
+  if (!scripts.length) { scriptList.innerHTML = '<p class="text-sm text-muted">None yet</p>'; }
+  else scripts.forEach(s => {
+    const d = document.createElement('div');
+    d.style.cssText = 'background:var(--bg-input);padding:.5rem .75rem;border-radius:6px;border:1px solid var(--border)';
+    d.innerHTML = `<div class="flex justify-between items-center"><span class="text-sm"><strong>${s.medication_name}</strong> · ${s.dosage} (×${s.quantity})</span><span class="badge ${s.status_billing==='PAID'?'badge-success':'badge-warning'}">${s.status_billing}</span></div>`;
+    scriptList.appendChild(d);
+  });
+}
+
+// ── Save clinical notes ───────────────────────────────────
+const notesForm = document.getElementById('notes-form');
+const btnNotes  = document.getElementById('btn-save-notes');
+
+notesForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const notes = document.getElementById('clinical-notes').value.trim();
+  if (!notes) { toast('Please enter clinical notes before closing.', 'error'); return; }
+  setLoading(btnNotes, true);
+  try {
+    await saveConsultation(currentEncounterId, notes);
+    toast('Encounter saved and closed successfully.', 'success');
+    consultPanel.classList.add('hidden');
+    emptyState.classList.remove('hidden');
+    await loadQueue();
+  } catch(err) { toast(err.message, 'error'); }
+  finally { setLoading(btnNotes, false, '✅ Save & Close Encounter'); }
+});
+
+// ── Request lab order ─────────────────────────────────────
+const labForm  = document.getElementById('lab-form');
+const btnLab   = document.getElementById('btn-lab');
+
+labForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const testType = document.getElementById('test-type').value;
+  if (!testType) { toast('Select a test type', 'error'); return; }
+  setLoading(btnLab, true);
+  try {
+    await requestLabOrder(currentEncounterId, testType);
+    toast(`Lab order for "${testType}" submitted.`, 'success');
+    document.getElementById('test-type').value = '';
+    await refreshSideLists();
+  } catch(err) { toast(err.message, 'error'); }
+  finally { setLoading(btnLab, false, 'Submit Lab Order'); }
+});
+
+// ── Issue prescription ────────────────────────────────────
+const scriptForm = document.getElementById('script-form');
+const btnScript  = document.getElementById('btn-script');
+
+scriptForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const med    = document.getElementById('med-name').value;
+  const dosage = document.getElementById('dosage').value.trim();
+  const qty    = document.getElementById('qty').value;
+  if (!med || !dosage || !qty) { toast('Fill all prescription fields.', 'error'); return; }
+  setLoading(btnScript, true);
+  try {
+    await issuePrescription({ encounterId: currentEncounterId, medicationName: med, dosage, quantity: qty });
+    toast(`Prescription for ${med} issued.`, 'success');
+    scriptForm.reset();
+    document.getElementById('qty').value = '1';
+    await refreshSideLists();
+  } catch(err) { toast(err.message, 'error'); }
+  finally { setLoading(btnScript, false, 'Issue Prescription'); }
+});
+</script>
+</body>
+</html>

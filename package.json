@@ -1,0 +1,11 @@
+{
+  "name": "rashford-hms",
+  "version": "1.0.0",
+  "description": "Rashford Hospital Management System – HTML/JS/Supabase MVP",
+  "scripts": {
+    "dev": "npx serve . -p 3000 --cors",
+    "start": "npx serve . -p 3000 --cors"
+  },
+  "keywords": ["hms", "hospital", "supabase"],
+  "license": "MIT"
+}

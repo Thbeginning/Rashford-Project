@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rashford HMS – Secure Login</title>
+  <meta name="description" content="Hospital Management System – Regional Medical Informatics Portal. Secure role-based access for staff." />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="login-page">
+  <div class="login-card">
+
+    <!-- Brand -->
+    <div class="login-brand">
+      <div class="login-brand-icon">🏥</div>
+      <div class="login-brand-text">
+        <h1>Hospital HMS</h1>
+        <p>Regional Hospital Management System</p>
+      </div>
+    </div>
+
+    <!-- Alert -->
+    <div id="login-alert" class="alert alert-danger hidden"></div>
+
+    <!-- Login Form -->
+    <form id="login-form">
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <input class="form-control" type="text" id="username" name="username"
+               placeholder="e.g. dr_rashford" autocomplete="username" required autofocus />
+      </div>
+
+      <div class="form-group" style="margin-bottom:2rem">
+        <label class="form-label" for="password">Password</label>
+        <input class="form-control" type="password" id="password" name="password"
+               placeholder="••••••••" autocomplete="current-password" required />
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-full" id="btn-login">
+        Authenticate Station
+      </button>
+    </form>
+
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<script>
+  // Catch any script loading errors or protocol issues
+  window.addEventListener('error', function(e) {
+    const alertEl = document.getElementById('login-alert');
+    if (alertEl) {
+      alertEl.textContent = '⚠️ System Error: ' + e.message;
+      alertEl.classList.remove('hidden');
+    }
+  });
+
+  if (window.location.protocol === 'file:') {
+    alert("⚠️ ERROR: You must use the local server (http://localhost:3000). The system will not work if you double-click the HTML file directly.");
+  }
+</script>
+
+<script type="module">
+  import { login, getSession, redirectByRole } from './js/auth.js';
+  import { setLoading } from './js/ui.js';
+
+  // If already logged in, redirect
+  const session = getSession();
+  if (session) redirectByRole(session.role);
+
+  const form     = document.getElementById('login-form');
+  const alertEl  = document.getElementById('login-alert');
+  const btnLogin = document.getElementById('btn-login');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    alertEl.classList.add('hidden');
+    setLoading(btnLogin, true);
+
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+
+    try {
+      const session = await login(username, password);
+      redirectByRole(session.role);
+    } catch (err) {
+      alertEl.textContent = '⚠️ ' + err.message;
+      alertEl.classList.remove('hidden');
+      setLoading(btnLogin, false, 'Authenticate Station');
+    }
+  });
+</script>
+
+</body>
+</html>

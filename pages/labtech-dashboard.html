@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rashford HMS – Laboratory Management</title>
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">🏥</div>
+      <div><h1>Rashford HMS</h1><p>Laboratory Station</p></div>
+    </div>
+    <nav class="nav">
+      <a class="nav-link" href="nurse-dashboard.html"><span class="nav-icon">🩺</span> Triage & Registration</a>
+      <a class="nav-link" href="doctor-dashboard.html"><span class="nav-icon">👨‍⚕️</span> Consultation</a>
+      <a class="nav-link active" href="labtech-dashboard.html"><span class="nav-icon">🔬</span> Laboratory</a>
+      <a class="nav-link" href="accountant-dashboard.html"><span class="nav-icon">💳</span> Finance</a>
+      <a class="nav-link" href="pharmacist-dashboard.html"><span class="nav-icon">💊</span> Pharmacy</a>
+      <div class="nav-divider"></div>
+      <a class="nav-link" id="btn-logout" href="#"><span class="nav-icon">🚪</span> Logout</a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="sidebar-avatar" id="sidebar-avatar">LT</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name" id="sidebar-name">Lab Tech</div>
+        <div class="sidebar-user-role" id="sidebar-role">LabTech</div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title">
+        <h2>Laboratory Management</h2>
+        <p>Process diagnostic test requests and sign off results</p>
+      </div>
+      <div class="status-pill">● Online</div>
+    </div>
+
+    <div class="page-content">
+      <div class="layout-split">
+
+        <!-- LEFT: Workspace -->
+        <div class="layout-main">
+
+          <!-- Empty -->
+          <div class="card text-center" id="lab-empty" style="padding:4rem 2rem">
+            <div style="font-size:3.5rem;margin-bottom:1rem">🔬</div>
+            <h3 class="text-bright" style="margin-bottom:.5rem">Select a Test Order</h3>
+            <p class="text-muted">Choose a pending diagnostic request from the queue to begin logging results.</p>
+          </div>
+
+          <!-- Workspace panel -->
+          <div id="lab-workspace" class="hidden">
+            <div class="card" style="padding:1.5rem">
+              <div class="flex justify-between items-center mb-2">
+                <div>
+                  <h3 class="text-bright" style="font-size:1.1rem;font-weight:700" id="lw-patient">—</h3>
+                  <div class="flex gap-1 mt-1">
+                    <span class="badge badge-primary" id="lw-pin">—</span>
+                    <span class="badge badge-warning" id="lw-test">—</span>
+                  </div>
+                </div>
+                <div class="text-sm text-muted">Lab Order #<span id="lw-order-id">—</span></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3 class="card-title">📋 Log Diagnostic Results</h3>
+
+              <div class="alert alert-warning" style="font-size:.85rem">
+                ⚠️ <strong>Immutability Constraint:</strong> Once you click "Sign Off & Submit", this result
+                record will be permanently locked and cannot be modified.
+              </div>
+
+              <form id="results-form">
+                <div class="form-group">
+                  <label class="form-label" for="results-payload">Results Payload & Findings</label>
+                  <textarea class="form-control" id="results-payload" rows="10"
+                    placeholder="Document test outcome, cell counts, measurements, clinical observations, and interpretation…" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-success btn-full" id="btn-signoff">
+                  ✅ Sign Off & Submit Results
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Completed Audit Log -->
+          <div class="card">
+            <div class="flex justify-between items-center mb-2">
+              <h3 class="card-title" style="margin-bottom:0">📁 Completed Results – Audit Log</h3>
+              <button class="btn btn-outline btn-sm" id="btn-refresh-completed">🔄 Refresh</button>
+            </div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Lab Ref</th>
+                    <th>Patient</th>
+                    <th>PIN</th>
+                    <th>Test Type</th>
+                    <th>Technician</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="completed-table"></tbody>
+              </table>
+            </div>
+          </div>
+
+        </div><!-- /layout-main -->
+
+        <!-- RIGHT: Pending Queue -->
+        <div>
+          <div class="card">
+            <div class="flex justify-between items-center mb-2">
+              <h2 class="card-title" style="margin-bottom:0">🗂️ Pending Test Queue</h2>
+              <button class="btn btn-outline btn-sm" id="btn-refresh-pending">🔄</button>
+            </div>
+            <div class="queue" id="pending-queue">
+              <p class="text-muted text-sm text-center">Loading…</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script type="module">
+import { requireAuth }                               from '../js/auth.js';
+import { wireSidebar, toast, setLoading, fmtDateTime } from '../js/ui.js';
+import { getPendingLabOrders, getCompletedLabOrders, saveLabResults } from '../js/modules/lab.js';
+
+const session = requireAuth();
+wireSidebar(session);
+
+let currentLabOrderId = null;
+
+// ── Pending queue ─────────────────────────────────────────
+const pendingQueue = document.getElementById('pending-queue');
+const emptyEl      = document.getElementById('lab-empty');
+const workspace    = document.getElementById('lab-workspace');
+
+async function loadPending() {
+  pendingQueue.innerHTML = '<p class="text-muted text-sm text-center">Loading…</p>';
+  try {
+    const list = await getPendingLabOrders();
+    pendingQueue.innerHTML = '';
+    if (!list.length) {
+      pendingQueue.innerHTML = '<p class="text-muted text-sm text-center">No pending orders</p>';
+      return;
+    }
+    list.forEach(o => {
+      const enc = o.encounters;
+      const p   = enc?.patients;
+      const el  = document.createElement('div');
+      el.className = 'queue-item';
+      el.innerHTML = `
+        <div>
+          <div class="queue-item-name">${o.test_type}</div>
+          <div class="queue-item-sub">${p?.first_name||''} ${p?.last_name||''} · ${enc?.patient_pin||''}</div>
+        </div>
+        <button class="btn btn-sm btn-accent">Log</button>`;
+      el.querySelector('button').addEventListener('click', () =>
+        openWorkspace(o.lab_order_id, o.test_type, `${p?.first_name||''} ${p?.last_name||''}`, enc?.patient_pin||'')
+      );
+      pendingQueue.appendChild(el);
+    });
+  } catch(err) { toast(err.message, 'error'); }
+}
+
+document.getElementById('btn-refresh-pending').addEventListener('click', loadPending);
+loadPending();
+
+// ── Open workspace ────────────────────────────────────────
+function openWorkspace(id, testType, patientName, pin) {
+  currentLabOrderId = id;
+  document.getElementById('lw-patient').textContent  = patientName;
+  document.getElementById('lw-pin').textContent      = pin;
+  document.getElementById('lw-test').textContent     = testType;
+  document.getElementById('lw-order-id').textContent = id;
+  document.getElementById('results-payload').value   = '';
+  emptyEl.classList.add('hidden');
+  workspace.classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Sign off results ──────────────────────────────────────
+const resultsForm = document.getElementById('results-form');
+const btnSignoff  = document.getElementById('btn-signoff');
+
+resultsForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const payload = document.getElementById('results-payload').value.trim();
+  if (!payload) { toast('Results payload is required.', 'error'); return; }
+
+  if (!confirm('⚠️ Signing off will permanently lock this result. Proceed?')) return;
+
+  setLoading(btnSignoff, true);
+  try {
+    await saveLabResults({ labOrderId: currentLabOrderId, techId: session.user_id, resultsPayload: payload });
+    toast('Results signed off and locked successfully.', 'success');
+    workspace.classList.add('hidden');
+    emptyEl.classList.remove('hidden');
+    await loadPending();
+    await loadCompleted();
+  } catch(err) { toast(err.message, 'error'); }
+  finally { setLoading(btnSignoff, false, '✅ Sign Off & Submit Results'); }
+});
+
+// ── Completed audit log ───────────────────────────────────
+const completedTable = document.getElementById('completed-table');
+
+async function loadCompleted() {
+  try {
+    const list = await getCompletedLabOrders();
+    completedTable.innerHTML = '';
+    if (!list.length) {
+      completedTable.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No completed records</td></tr>';
+      return;
+    }
+    list.forEach(o => {
+      const enc = o.encounters;
+      const p   = enc?.patients;
+      const tr  = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>#${o.lab_order_id}</strong></td>
+        <td>${p?.first_name||''} ${p?.last_name||''}</td>
+        <td><span class="badge badge-primary">${enc?.patient_pin||'—'}</span></td>
+        <td><strong>${o.test_type}</strong></td>
+        <td>${o.hms_users?.full_name || 'System'}</td>
+        <td><span class="badge badge-success">SIGNED OFF</span></td>`;
+      completedTable.appendChild(tr);
+    });
+  } catch(err) { toast(err.message, 'error'); }
+}
+
+document.getElementById('btn-refresh-completed').addEventListener('click', loadCompleted);
+loadCompleted();
+</script>
+</body>
+</html>

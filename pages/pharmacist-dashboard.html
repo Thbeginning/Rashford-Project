@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rashford HMS – Pharmacy Dispensing</title>
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">🏥</div>
+      <div><h1>Rashford HMS</h1><p>Pharmacy Station</p></div>
+    </div>
+    <nav class="nav">
+      <a class="nav-link" href="nurse-dashboard.html"><span class="nav-icon">🩺</span> Triage & Registration</a>
+      <a class="nav-link" href="doctor-dashboard.html"><span class="nav-icon">👨‍⚕️</span> Consultation</a>
+      <a class="nav-link" href="labtech-dashboard.html"><span class="nav-icon">🔬</span> Laboratory</a>
+      <a class="nav-link" href="accountant-dashboard.html"><span class="nav-icon">💳</span> Finance</a>
+      <a class="nav-link active" href="pharmacist-dashboard.html"><span class="nav-icon">💊</span> Pharmacy</a>
+      <div class="nav-divider"></div>
+      <a class="nav-link" id="btn-logout" href="#"><span class="nav-icon">🚪</span> Logout</a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="sidebar-avatar" id="sidebar-avatar">PH</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name" id="sidebar-name">Pharmacist</div>
+        <div class="sidebar-user-role" id="sidebar-role">Pharmacist</div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title">
+        <h2>Pharmacy & Dispensing Control</h2>
+        <p>Dispense approved prescriptions – billing clearance is mandatory</p>
+      </div>
+      <div class="status-pill">● Online</div>
+    </div>
+
+    <div class="page-content">
+
+      <!-- ── Metrics Row ── -->
+      <div class="grid-4 mb-3">
+        <div class="metric-card">
+          <div class="metric-icon icon-orange">💊</div>
+          <div>
+            <div class="metric-label">Pending Scripts</div>
+            <div class="metric-value" id="m-pending">—</div>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon icon-green">✅</div>
+          <div>
+            <div class="metric-label">Dispensed Today</div>
+            <div class="metric-value" id="m-dispensed">—</div>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon icon-blue">📦</div>
+          <div>
+            <div class="metric-label">Stock Lines</div>
+            <div class="metric-value" id="m-stock">—</div>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon icon-purple">🔒</div>
+          <div>
+            <div class="metric-label">Locked (Unpaid)</div>
+            <div class="metric-value" id="m-locked">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="layout-split">
+
+        <!-- LEFT: Dispense Queue -->
+        <div class="layout-main">
+
+          <!-- Pending Dispense -->
+          <div class="card">
+            <div class="flex justify-between items-center mb-2">
+              <h2 class="card-title" style="margin-bottom:0">📋 Pending Prescriptions Queue</h2>
+              <button class="btn btn-outline btn-sm" id="btn-refresh">🔄 Refresh</button>
+            </div>
+
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Script ID</th>
+                    <th>Patient</th>
+                    <th>Medication</th>
+                    <th>Dosage</th>
+                    <th>Qty</th>
+                    <th>Billing</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="pending-table">
+                  <tr><td colspan="7" class="text-center text-muted">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Dispensed History -->
+          <div class="card">
+            <div class="flex justify-between items-center mb-2">
+              <h2 class="card-title" style="margin-bottom:0">📁 Dispensed History</h2>
+              <button class="btn btn-outline btn-sm" id="btn-refresh-history">🔄</button>
+            </div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Script #</th>
+                    <th>Patient</th>
+                    <th>Medication</th>
+                    <th>Qty</th>
+                    <th>Pharmacist</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="history-table">
+                  <tr><td colspan="6" class="text-center text-muted">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div><!-- /layout-main -->
+
+        <!-- RIGHT: Stock Ledger -->
+        <div>
+          <div class="card">
+            <div class="flex justify-between items-center mb-2">
+              <h2 class="card-title" style="margin-bottom:0">📦 Inventory Stock Ledger</h2>
+              <button class="btn btn-outline btn-sm" id="btn-refresh-stock">🔄</button>
+            </div>
+            <div class="queue" id="stock-list">
+              <p class="text-muted text-sm text-center">Loading…</p>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /layout-split -->
+    </div><!-- /page-content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<div id="toast-container"></div>
+
+<script type="module">
+import { requireAuth }                              from '../js/auth.js';
+import { wireSidebar, toast, setLoading, fmtXAF }  from '../js/ui.js';
+import {
+  getPendingDispenseQueue, getDispensedHistory,
+  getPharmacyStock, checkBillingClearance, dispenseMedication
+} from '../js/modules/pharmacy.js';
+
+const session = requireAuth();
+wireSidebar(session);
+
+// ── Load pending prescription queue ─────────────────────────
+const pendingTable = document.getElementById('pending-table');
+
+async function loadPending() {
+  pendingTable.innerHTML = '<tr><td colspan="7" class="text-center"><span class="spinner"></span></td></tr>';
+  try {
+    const list = await getPendingDispenseQueue();
+
+    // Compute metrics
+    document.getElementById('m-pending').textContent = list.length;
+    let lockedCount = 0;
+
+    pendingTable.innerHTML = '';
+    if (!list.length) {
+      pendingTable.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No pending prescriptions</td></tr>';
+      document.getElementById('m-locked').textContent = '0';
+      return;
+    }
+
+    // Check billing for each unique patient and cache results
+    const billingCache = {};
+
+    for (const script of list) {
+      const enc = script.encounters;
+      const p   = enc?.patients;
+      const pin = enc?.patient_pin || '';
+
+      if (!billingCache[pin]) {
+        try {
+          billingCache[pin] = await checkBillingClearance(pin);
+        } catch { billingCache[pin] = 'UNKNOWN'; }
+      }
+
+      const isPaid   = billingCache[pin] === 'PAID';
+      if (!isPaid) lockedCount++;
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>#${script.script_id}</strong></td>
+        <td>
+          <div>${p?.first_name||''} ${p?.last_name||''}</div>
+          <div class="text-sm text-muted">${pin}</div>
+        </td>
+        <td><strong>${script.medication_name}</strong></td>
+        <td>${script.dosage}</td>
+        <td>${script.quantity}</td>
+        <td>
+          <span class="badge ${isPaid ? 'badge-success' : 'badge-danger'}">
+            ${isPaid ? '✅ PAID' : '🔒 UNPAID'}
+          </span>
+        </td>
+        <td>
+          <button
+            class="btn btn-sm btn-success"
+            id="dispense-btn-${script.script_id}"
+            data-script-id="${script.script_id}"
+            data-patient-pin="${pin}"
+            data-med="${script.medication_name}"
+            ${!isPaid ? 'disabled title="Payment required before dispensing"' : ''}
+          >
+            ${isPaid ? '💊 Dispense' : '🔒 Locked'}
+          </button>
+        </td>`;
+
+      // Wire dispense button
+      if (isPaid) {
+        tr.querySelector(`#dispense-btn-${script.script_id}`).addEventListener('click', async (e) => {
+          const btn = e.currentTarget;
+          const scriptId  = btn.dataset.scriptId;
+          const patientPin= btn.dataset.patientPin;
+          const med       = btn.dataset.med;
+
+          if (!confirm(`Dispense "${med}" for patient ${patientPin}? This action is final.`)) return;
+          setLoading(btn, true);
+          try {
+            await dispenseMedication({ scriptId, pharmacistId: session.user_id, patientPin });
+            toast(`"${med}" dispensed successfully.`, 'success');
+            await Promise.all([loadPending(), loadHistory(), loadStock()]);
+          } catch(err) {
+            toast(err.message, 'error');
+            setLoading(btn, false, '💊 Dispense');
+          }
+        });
+      }
+
+      pendingTable.appendChild(tr);
+    }
+
+    document.getElementById('m-locked').textContent = lockedCount;
+  } catch(err) {
+    toast(err.message, 'error');
+    pendingTable.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Error loading data</td></tr>';
+  }
+}
+
+// ── Dispensed history ────────────────────────────────────────
+const historyTable = document.getElementById('history-table');
+
+async function loadHistory() {
+  try {
+    const list = await getDispensedHistory();
+    document.getElementById('m-dispensed').textContent = list.length;
+    historyTable.innerHTML = '';
+    if (!list.length) {
+      historyTable.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No dispensed records</td></tr>';
+      return;
+    }
+    list.forEach(s => {
+      const p  = s.encounters?.patients;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>#${s.script_id}</td>
+        <td>${p?.first_name||''} ${p?.last_name||''}</td>
+        <td><strong>${s.medication_name}</strong></td>
+        <td>${s.quantity}</td>
+        <td>${s.hms_users?.full_name || '—'}</td>
+        <td><span class="badge badge-success">DISPENSED</span></td>`;
+      historyTable.appendChild(tr);
+    });
+  } catch(err) { toast(err.message, 'error'); }
+}
+
+// ── Stock ledger ─────────────────────────────────────────────
+const stockList = document.getElementById('stock-list');
+
+async function loadStock() {
+  try {
+    const list = await getPharmacyStock();
+    document.getElementById('m-stock').textContent = list.length;
+    stockList.innerHTML = '';
+    if (!list.length) {
+      stockList.innerHTML = '<p class="text-muted text-sm text-center">No stock entries</p>';
+      return;
+    }
+    list.forEach(item => {
+      const isLow = item.quantity < 20;
+      const el    = document.createElement('div');
+      el.className = 'queue-item';
+      el.style.flexDirection = 'column';
+      el.style.alignItems    = 'flex-start';
+      el.innerHTML = `
+        <div class="flex justify-between items-center w-full">
+          <div class="queue-item-name">${item.medication_name}</div>
+          <span class="badge ${isLow ? 'badge-danger' : 'badge-success'}">${item.quantity} units</span>
+        </div>
+        <div class="queue-item-sub">${fmtXAF(item.unit_price_xaf)} per unit</div>
+        <div style="margin-top:.5rem;width:100%;height:4px;background:var(--border);border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${Math.min(100,(item.quantity/200)*100)}%;background:${isLow?'var(--danger)':'var(--success)'};transition:.3s"></div>
+        </div>`;
+      stockList.appendChild(el);
+    });
+  } catch(err) { toast(err.message, 'error'); }
+}
+
+// ── Wire buttons & initial load ──────────────────────────────
+document.getElementById('btn-refresh').addEventListener('click', loadPending);
+document.getElementById('btn-refresh-history').addEventListener('click', loadHistory);
+document.getElementById('btn-refresh-stock').addEventListener('click', loadStock);
+
+await Promise.all([loadPending(), loadHistory(), loadStock()]);
+</script>
+</body>
+</html>

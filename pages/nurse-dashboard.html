@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rashford HMS – Triage & Registration</title>
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+<div class="app">
+
+  <!-- ═══ SIDEBAR ══════════════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">🏥</div>
+      <div>
+        <h1>Rashford HMS</h1>
+        <p>Nursing Station</p>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a class="nav-link active" href="nurse-dashboard.html"><span class="nav-icon">🩺</span> Triage & Registration</a>
+      <div class="nav-divider"></div>
+      <a class="nav-link" href="doctor-dashboard.html"><span class="nav-icon">👨‍⚕️</span> Consultation</a>
+      <a class="nav-link" href="labtech-dashboard.html"><span class="nav-icon">🔬</span> Laboratory</a>
+      <a class="nav-link" href="accountant-dashboard.html"><span class="nav-icon">💳</span> Finance</a>
+      <a class="nav-link" href="pharmacist-dashboard.html"><span class="nav-icon">💊</span> Pharmacy</a>
+      <div class="nav-divider"></div>
+      <a class="nav-link" id="btn-logout" href="#"><span class="nav-icon">🚪</span> Logout</a>
+    </nav>
+
+    <div class="sidebar-user">
+      <div class="sidebar-avatar" id="sidebar-avatar">NU</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name" id="sidebar-name">Nurse</div>
+        <div class="sidebar-user-role" id="sidebar-role">Nurse</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ MAIN ═════════════════════════════════════ -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title">
+        <h2>Triage & Patient Registration</h2>
+        <p>Register new patients and log vital signs for clinical handoff</p>
+      </div>
+      <div class="status-pill">● System Online</div>
+    </div>
+
+    <div class="page-content">
+      <div id="page-alert"></div>
+
+      <div class="layout-split">
+
+        <!-- LEFT: Registration + Triage Forms -->
+        <div class="layout-main">
+
+          <!-- ── Registration Card ── -->
+          <div class="card">
+            <h2 class="card-title">🆕 Patient Demographic Registration</h2>
+            <form id="reg-form">
+              <div class="grid-2">
+                <div class="form-group">
+                  <label class="form-label" for="first_name">First Name</label>
+                  <input class="form-control" type="text" id="first_name" placeholder="e.g. John" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="last_name">Last Name</label>
+                  <input class="form-control" type="text" id="last_name" placeholder="e.g. Doe" required />
+                </div>
+              </div>
+              <div class="grid-2">
+                <div class="form-group">
+                  <label class="form-label" for="dob">Date of Birth</label>
+                  <input class="form-control" type="date" id="dob" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="gender">Gender</label>
+                  <select class="form-control" id="gender" required>
+                    <option value="">— Select —</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="phone_num">Phone Number</label>
+                <input class="form-control" type="tel" id="phone_num" placeholder="e.g. +237 678 000 000" />
+              </div>
+
+              <!-- PIN Display (populated after registration) -->
+              <div id="pin-success" class="hidden" style="margin-bottom:1rem">
+                <div class="alert alert-success">
+                  ✅ Patient Registered!
+                  PIN: <strong id="generated-pin" style="font-size:1.1rem;letter-spacing:1px">—</strong>
+                  <br/><small>Auto-filled in Triage form below ↓</small>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-full" id="btn-register">
+                Register & Generate PIN
+              </button>
+            </form>
+          </div>
+
+          <!-- ── Triage Card ── -->
+          <div class="card">
+            <h2 class="card-title">📋 Nursing Triage – Vital Signs Entry</h2>
+            <form id="triage-form">
+
+              <!-- Patient search -->
+              <div class="form-group">
+                <label class="form-label" for="triage-search">Search Patient (Name or PIN)</label>
+                <div class="search-wrap">
+                  <input class="form-control" type="text" id="triage-search" placeholder="Type name or PIN…" autocomplete="off" />
+                  <div class="search-dropdown" id="triage-dropdown"></div>
+                </div>
+                <input type="hidden" id="triage-pin" />
+                <div class="mt-1 hidden" id="triage-pin-badge">
+                  <span class="badge badge-success" id="triage-pin-label">—</span>
+                  <span class="badge badge-primary" style="margin-left:.4rem" id="triage-patient-name">—</span>
+                </div>
+              </div>
+
+              <!-- Doctor assignment -->
+              <div class="form-group">
+                <label class="form-label" for="doctor-select">Assign to Medical Officer</label>
+                <select class="form-control" id="doctor-select" required>
+                  <option value="">— Loading doctors… —</option>
+                </select>
+              </div>
+
+              <!-- Vitals -->
+              <div class="grid-2">
+                <div class="form-group">
+                  <label class="form-label" for="vitals-bp">Blood Pressure (mmHg)</label>
+                  <input class="form-control" type="text" id="vitals-bp" placeholder="e.g. 120/80" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="vitals-temp">Body Temperature (°C)</label>
+                  <input class="form-control" type="number" step="0.1" id="vitals-temp" placeholder="e.g. 36.5" required />
+                </div>
+              </div>
+              <div class="grid-2">
+                <div class="form-group">
+                  <label class="form-label" for="vitals-pulse">Pulse Rate (bpm)</label>
+                  <input class="form-control" type="number" id="vitals-pulse" placeholder="e.g. 72" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="vitals-weight">Weight (kg)</label>
+                  <input class="form-control" type="number" step="0.1" id="vitals-weight" placeholder="e.g. 70.0" required />
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-accent btn-full" id="btn-triage" disabled>
+                Log Vitals & Open Visit Encounter
+              </button>
+            </form>
+          </div>
+
+        </div><!-- /layout-main -->
+
+        <!-- RIGHT: Patient Directory -->
+        <div>
+          <div class="card" style="height:fit-content">
+            <h2 class="card-title">🗂️ Patient Registry Directory</h2>
+            <div class="form-group">
+              <input class="form-control" type="text" id="dir-search" placeholder="Quick search…" />
+            </div>
+            <div class="queue" id="dir-list">
+              <p class="text-muted text-sm text-center">Loading registry…</p>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /layout-split -->
+    </div><!-- /page-content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<div id="toast-container"></div>
+
+<script type="module">
+import { requireAuth }                          from '../js/auth.js';
+import { wireSidebar, toast, setLoading, wireSearchDropdown, fmtDate } from '../js/ui.js';
+import { registerPatient, searchPatients }      from '../js/modules/patient.js';
+import { createTriage, getDoctors }             from '../js/modules/encounter.js';
+
+// ── Auth guard ──────────────────────────────────────────────
+const session = requireAuth();
+if (!session) throw new Error('redirect');
+wireSidebar(session);
+
+// ── Load doctors into dropdown ──────────────────────────────
+const docSelect = document.getElementById('doctor-select');
+getDoctors().then(docs => {
+  docSelect.innerHTML = '<option value="">— Select Medical Officer —</option>';
+  docs.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d.user_id;
+    opt.textContent = d.full_name || d.username;
+    docSelect.appendChild(opt);
+  });
+}).catch(() => toast('Could not load doctors list.', 'error'));
+
+// ── Live search: patient directory ─────────────────────────
+const dirSearch = document.getElementById('dir-search');
+const dirList   = document.getElementById('dir-list');
+
+async function loadDirectory(q = '') {
+  const patients = await searchPatients(q);
+  dirList.innerHTML = '';
+  if (!patients.length) {
+    dirList.innerHTML = '<p class="text-muted text-sm text-center">No records found</p>';
+    return;
+  }
+  patients.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'queue-item';
+    el.innerHTML = `
+      <div>
+        <div class="queue-item-name">${p.first_name} ${p.last_name}</div>
+        <div class="queue-item-sub">PIN: ${p.patient_pin} · DOB: ${fmtDate(p.dob)} · ${p.gender}</div>
+      </div>
+      <button class="btn btn-sm btn-primary" data-pin="${p.patient_pin}" data-name="${p.first_name} ${p.last_name}">
+        Select
+      </button>`;
+    el.querySelector('button').addEventListener('click', (ev) => {
+      selectPatientForTriage(ev.target.dataset.pin, ev.target.dataset.name);
+    });
+    dirList.appendChild(el);
+  });
+}
+
+dirSearch.addEventListener('input', () => loadDirectory(dirSearch.value.trim()));
+loadDirectory();
+
+// ── Patient search for triage form ─────────────────────────
+const triageSearch   = document.getElementById('triage-search');
+const triageDropdown = document.getElementById('triage-dropdown');
+const triagePin      = document.getElementById('triage-pin');
+const triagePinBadge = document.getElementById('triage-pin-badge');
+const triagePinLabel = document.getElementById('triage-pin-label');
+const triageName     = document.getElementById('triage-patient-name');
+const btnTriage      = document.getElementById('btn-triage');
+
+wireSearchDropdown({
+  inputEl:    triageSearch,
+  dropdownEl: triageDropdown,
+  hiddenEl:   triagePin,
+  onSelect: (r) => selectPatientForTriage(r.value, r.label),
+  fetchFn: async (q) => {
+    const list = await searchPatients(q);
+    return list.map(p => ({
+      value: p.patient_pin,
+      label: `${p.first_name} ${p.last_name}`,
+      sub:   p.patient_pin
+    }));
+  }
+});
+
+function selectPatientForTriage(pin, name) {
+  triagePin.value = pin;
+  triageSearch.value = name;
+  triagePinLabel.textContent = pin;
+  triageName.textContent = name;
+  triagePinBadge.classList.remove('hidden');
+  btnTriage.disabled = false;
+  toast(`Patient ${name} selected`, 'info');
+}
+
+// ── Patient Registration form ───────────────────────────────
+const regForm   = document.getElementById('reg-form');
+const btnReg    = document.getElementById('btn-register');
+const pinSuccess= document.getElementById('pin-success');
+const genPin    = document.getElementById('generated-pin');
+
+regForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  setLoading(btnReg, true);
+  try {
+    const pin = await registerPatient({
+      firstName: document.getElementById('first_name').value,
+      lastName:  document.getElementById('last_name').value,
+      dob:       document.getElementById('dob').value,
+      gender:    document.getElementById('gender').value,
+      phoneNum:  document.getElementById('phone_num').value
+    });
+
+    genPin.textContent = pin;
+    pinSuccess.classList.remove('hidden');
+    toast(`Patient registered! PIN: ${pin}`, 'success');
+    regForm.reset();
+
+    // Auto-select in triage
+    const name = `${document.getElementById('first_name').defaultValue || ''}`;
+    selectPatientForTriage(pin, `New Patient (${pin})`);
+
+    // Refresh directory
+    loadDirectory();
+  } catch (err) {
+    toast(err.message, 'error');
+  } finally {
+    setLoading(btnReg, false, 'Register & Generate PIN');
+  }
+});
+
+// ── Triage form ────────────────────────────────────────────
+const triageForm = document.getElementById('triage-form');
+triageForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const pin = triagePin.value;
+  if (!pin) { toast('Please select a patient first', 'error'); return; }
+
+  setLoading(btnTriage, true);
+  try {
+    const enc = await createTriage({
+      patientPin: pin,
+      doctorId:   document.getElementById('doctor-select').value,
+      bp:         document.getElementById('vitals-bp').value,
+      temp:       document.getElementById('vitals-temp').value,
+      pulse:      document.getElementById('vitals-pulse').value,
+      weight:     document.getElementById('vitals-weight').value
+    });
+
+    toast(`Triage recorded! Encounter #${enc.encounter_id} created.`, 'success');
+    triageForm.reset();
+    triagePinBadge.classList.add('hidden');
+    triagePin.value = '';
+    btnTriage.disabled = true;
+  } catch (err) {
+    toast(err.message, 'error');
+  } finally {
+    setLoading(btnTriage, false, 'Log Vitals & Open Visit Encounter');
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rashford HMS – Finance & Billing</title>
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">🏥</div>
+      <div><h1>Rashford HMS</h1><p>Finance Station</p></div>
+    </div>
+    <nav class="nav">
+      <a class="nav-link" href="nurse-dashboard.html"><span class="nav-icon">🩺</span> Triage & Registration</a>
+      <a class="nav-link" href="doctor-dashboard.html"><span class="nav-icon">👨‍⚕️</span> Consultation</a>
+      <a class="nav-link" href="labtech-dashboard.html"><span class="nav-icon">🔬</span> Laboratory</a>
+      <a class="nav-link active" href="accountant-dashboard.html"><span class="nav-icon">💳</span> Finance</a>
+      <a class="nav-link" href="pharmacist-dashboard.html"><span class="nav-icon">💊</span> Pharmacy</a>
+      <div class="nav-divider"></div>
+      <a class="nav-link" id="btn-logout" href="#"><span class="nav-icon">🚪</span> Logout</a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="sidebar-avatar" id="sidebar-avatar">AC</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name" id="sidebar-name">Accountant</div>
+        <div class="sidebar-user-role" id="sidebar-role">Accountant</div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title">
+        <h2>Finance & Billing Management</h2>
+        <p>Aggregate charges, generate invoices, and process patient payments</p>
+      </div>
+      <div class="status-pill">● Online</div>
+    </div>
+
+    <div class="page-content">
+      <div id="page-alert"></div>
+
+      <div class="layout-split">
+
+        <!-- LEFT: Billing Workspace -->
+        <div class="layout-main">
+
+          <!-- Invoice Generator -->
+          <div class="card">
+            <h2 class="card-title">🧾 Invoice Generator</h2>
+            <form id="billing-form">
+              <div class="form-group">
+                <label class="form-label" for="billing-search">Search Patient by Name or PIN</label>
+                <div class="search-wrap">
+                  <input class="form-control" type="text" id="billing-search" placeholder="Type name or PIN…" autocomplete="off" />
+                  <div class="search-dropdown" id="billing-dropdown"></div>
+                </div>
+                <input type="hidden" id="billing-pin" />
+                <div class="mt-1 hidden" id="billing-pin-badge">
+                  <span class="badge badge-primary" id="billing-pin-label">—</span>
+                  <span class="badge badge-success" id="billing-patient-name">—</span>
+                </div>
+              </div>
+              <button type="button" class="btn btn-primary btn-full" id="btn-compute" disabled>
+                🔍 Compute Billable Items
+              </button>
+            </form>
+          </div>
+
+          <!-- Itemized Invoice Preview (hidden until computed) -->
+          <div class="card hidden" id="invoice-preview">
+            <h2 class="card-title">📊 Itemized Invoice Preview</h2>
+
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Item Ref</th>
+                    <th>Description</th>
+                    <th>Department</th>
+                    <th>Tariff (XAF)</th>
+                  </tr>
+                </thead>
+                <tbody id="items-table"></tbody>
+              </table>
+            </div>
+
+            <div class="invoice-total-row">
+              <div class="invoice-total-label">💰 Total Amount Due</div>
+              <div class="invoice-total-value" id="invoice-total">0 XAF</div>
+            </div>
+
+            <div class="mt-2 flex gap-2">
+              <button class="btn btn-success" id="btn-create-invoice">✅ Generate & Post Invoice</button>
+              <button class="btn btn-outline" id="btn-cancel-invoice">Cancel</button>
+            </div>
+          </div>
+
+          <!-- Payment Processing -->
+          <div class="card hidden" id="payment-panel">
+            <h2 class="card-title">💳 Payment Processing</h2>
+            <div class="alert alert-info" id="payment-info"></div>
+            <div class="flex gap-2">
+              <button class="btn btn-success" id="btn-confirm-payment">✅ Mark as PAID</button>
+              <button class="btn btn-outline" id="btn-cancel-payment">Cancel</button>
+            </div>
+          </div>
+
+        </div><!-- /layout-main -->
+
+        <!-- RIGHT: Pending Invoices + History -->
+        <div class="layout-main">
+          <!-- Pending invoices -->
+          <div class="card">
+            <div class="flex justify-between items-center mb-2">
+              <h2 class="card-title" style="margin-bottom:0">⏳ Pending Invoices</h2>
+              <button class="btn btn-outline btn-sm" id="btn-refresh-pending">🔄</button>
+            </div>
+            <div class="queue" id="pending-invoices">
+              <p class="text-muted text-sm text-center">Loading…</p>
+            </div>
+          </div>
+
+          <!-- Invoice history -->
+          <div class="card">
+            <div class="flex justify-between items-center mb-2">
+              <h2 class="card-title" style="margin-bottom:0">📁 Payment History</h2>
+              <button class="btn btn-outline btn-sm" id="btn-refresh-history">🔄</button>
+            </div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr><th>#</th><th>Patient</th><th>Amount</th><th>Status</th></tr>
+                </thead>
+                <tbody id="history-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script type="module">
+import { requireAuth }                             from '../js/auth.js';
+import { wireSidebar, toast, setLoading, wireSearchDropdown, fmtXAF } from '../js/ui.js';
+import { searchPatients }                          from '../js/modules/patient.js';
+import {
+  getUnbilledItems, createInvoice, processPayment,
+  getPendingInvoices, getInvoiceHistory
+} from '../js/modules/billing.js';
+
+const session = requireAuth();
+wireSidebar(session);
+
+let currentPin = null;
+let pendingInvoiceData = null;      // { items, totalAmount }
+let createdInvoiceId   = null;      // newly created invoice ID
+
+// ── Patient search for billing ───────────────────────────────
+wireSearchDropdown({
+  inputEl:    document.getElementById('billing-search'),
+  dropdownEl: document.getElementById('billing-dropdown'),
+  hiddenEl:   document.getElementById('billing-pin'),
+  onSelect: (r) => {
+    currentPin = r.value;
+    document.getElementById('billing-pin-label').textContent    = r.value;
+    document.getElementById('billing-patient-name').textContent = r.label;
+    document.getElementById('billing-pin-badge').classList.remove('hidden');
+    document.getElementById('btn-compute').disabled = false;
+    // Reset
+    document.getElementById('invoice-preview').classList.add('hidden');
+    document.getElementById('payment-panel').classList.add('hidden');
+    toast(`Patient ${r.label} selected`, 'info');
+  },
+  fetchFn: async (q) => {
+    const list = await searchPatients(q);
+    return list.map(p => ({
+      value: p.patient_pin,
+      label: `${p.first_name} ${p.last_name}`,
+      sub: p.patient_pin
+    }));
+  }
+});
+
+// ── Compute billable items ────────────────────────────────────
+const btnCompute    = document.getElementById('btn-compute');
+const invoicePreview= document.getElementById('invoice-preview');
+const itemsTable    = document.getElementById('items-table');
+const invoiceTotal  = document.getElementById('invoice-total');
+
+btnCompute.addEventListener('click', async () => {
+  if (!currentPin) return;
+  setLoading(btnCompute, true);
+  try {
+    const { items, totalAmount } = await getUnbilledItems(currentPin);
+    pendingInvoiceData = { items, totalAmount };
+
+    if (!items.length) {
+      toast('No unbilled items found for this patient.', 'info');
+      setLoading(btnCompute, false, '🔍 Compute Billable Items');
+      return;
+    }
+
+    itemsTable.innerHTML = '';
+    items.forEach(item => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><code>${item.ref}</code></td>
+        <td>${item.description}</td>
+        <td><span class="badge badge-primary">${item.department}</span></td>
+        <td><strong>${fmtXAF(item.cost)}</strong></td>`;
+      itemsTable.appendChild(tr);
+    });
+
+    invoiceTotal.textContent = fmtXAF(totalAmount);
+    invoicePreview.classList.remove('hidden');
+    document.getElementById('payment-panel').classList.add('hidden');
+    toast(`${items.length} billable items computed.`, 'success');
+  } catch(err) { toast(err.message, 'error'); }
+  finally { setLoading(btnCompute, false, '🔍 Compute Billable Items'); }
+});
+
+// ── Create invoice ────────────────────────────────────────────
+const btnCreate  = document.getElementById('btn-create-invoice');
+const btnCancelI = document.getElementById('btn-cancel-invoice');
+
+btnCreate.addEventListener('click', async () => {
+  if (!pendingInvoiceData || !currentPin) return;
+  setLoading(btnCreate, true);
+  try {
+    const inv = await createInvoice({
+      patientPin:    currentPin,
+      totalAmount:   pendingInvoiceData.totalAmount,
+      itemsSnapshot: pendingInvoiceData.items
+    });
+    createdInvoiceId = inv.invoice_id;
+
+    document.getElementById('payment-info').innerHTML =
+      `Invoice <strong>#${inv.invoice_id}</strong> created for patient <strong>${document.getElementById('billing-patient-name').textContent}</strong>.<br/>
+       Total: <strong>${fmtXAF(pendingInvoiceData.totalAmount)}</strong><br/>
+       Confirm payment receipt to unlock Pharmacy dispensing.`;
+
+    invoicePreview.classList.add('hidden');
+    document.getElementById('payment-panel').classList.remove('hidden');
+    toast(`Invoice #${inv.invoice_id} generated.`, 'success');
+    await loadPendingInvoices();
+  } catch(err) { toast(err.message, 'error'); }
+  finally { setLoading(btnCreate, false, '✅ Generate & Post Invoice'); }
+});
+
+btnCancelI.addEventListener('click', () => invoicePreview.classList.add('hidden'));
+
+// ── Process payment ───────────────────────────────────────────
+const btnConfirmPay = document.getElementById('btn-confirm-payment');
+const btnCancelPay  = document.getElementById('btn-cancel-payment');
+
+btnConfirmPay.addEventListener('click', async () => {
+  if (!createdInvoiceId) return;
+  if (!confirm('Confirm payment received and mark invoice as PAID?')) return;
+  setLoading(btnConfirmPay, true);
+  try {
+    await processPayment({ invoiceId: createdInvoiceId, accountantId: session.user_id, patientPin: currentPin });
+    toast('Payment processed! Pharmacy dispensing is now unlocked.', 'success');
+    document.getElementById('payment-panel').classList.add('hidden');
+    document.getElementById('billing-search').value = '';
+    document.getElementById('billing-pin-badge').classList.add('hidden');
+    document.getElementById('btn-compute').disabled = true;
+    currentPin = null;
+    await loadPendingInvoices();
+    await loadHistory();
+  } catch(err) { toast(err.message, 'error'); }
+  finally { setLoading(btnConfirmPay, false, '✅ Mark as PAID'); }
+});
+
+btnCancelPay.addEventListener('click', () => document.getElementById('payment-panel').classList.add('hidden'));
+
+// ── Pending invoices ──────────────────────────────────────────
+const pendingInvoicesEl = document.getElementById('pending-invoices');
+
+async function loadPendingInvoices() {
+  try {
+    const list = await getPendingInvoices();
+    pendingInvoicesEl.innerHTML = '';
+    if (!list.length) {
+      pendingInvoicesEl.innerHTML = '<p class="text-muted text-sm text-center">No pending invoices</p>';
+      return;
+    }
+    list.forEach(inv => {
+      const p  = inv.patients;
+      const el = document.createElement('div');
+      el.className = 'queue-item';
+      el.innerHTML = `
+        <div>
+          <div class="queue-item-name">${p?.first_name||''} ${p?.last_name||''}</div>
+          <div class="queue-item-sub">Invoice #${inv.invoice_id} · ${fmtXAF(inv.total_amount)}</div>
+        </div>
+        <span class="badge badge-danger">UNPAID</span>`;
+      pendingInvoicesEl.appendChild(el);
+    });
+  } catch(err) { toast(err.message, 'error'); }
+}
+
+document.getElementById('btn-refresh-pending').addEventListener('click', loadPendingInvoices);
+loadPendingInvoices();
+
+// ── Invoice history ───────────────────────────────────────────
+const historyTable = document.getElementById('history-table');
+
+async function loadHistory() {
+  try {
+    const list = await getInvoiceHistory();
+    historyTable.innerHTML = '';
+    if (!list.length) {
+      historyTable.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No records</td></tr>';
+      return;
+    }
+    list.forEach(inv => {
+      const p  = inv.patients;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>#${inv.invoice_id}</td>
+        <td>${p?.first_name||''} ${p?.last_name||''}</td>
+        <td><strong>${fmtXAF(inv.total_amount)}</strong></td>
+        <td><span class="badge ${inv.payment_status==='PAID'?'badge-success':'badge-danger'}">${inv.payment_status}</span></td>`;
+      historyTable.appendChild(tr);
+    });
+  } catch(err) { toast(err.message, 'error'); }
+}
+
+document.getElementById('btn-refresh-history').addEventListener('click', loadHistory);
+loadHistory();
+</script>
+</body>
+</html>
